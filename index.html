@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+</head>
+<body>
+    <div class="form">
+        <input type="text" name="text">
+        <input type="button" value="Send" id="btn">
+    </div>
+    <div>
+        <ul class="messages"></ul>
+    </div>
+    <script>
+        var yourActionsSinceTime = (new Date(Date.now() - 120000)).getTime();;
+        (function poll(){
+            var timeout = 45;
+            if (yourActionsSinceTime){
+                optionalSince = "&since_time=" + yourActionsSinceTime;
+            }
+            var pollUrl = `/events?timeout=${timeout}&category=mes${optionalSince}`
+            var successDelay = 10;
+            var errorDelay = 3000;
+            $.ajax({
+                url: pollUrl,
+                success: function(data){
+                    if (data && data.events && data.events.length > 0){
+                        for(var i=0;i<data.events.length;i++){
+                            var event = data.events[i];
+                            $(".messages").prepend('<li>'+event.data.text+'</li>');
+                            yourActionsSinceTime = event.timestamp;
+                        }
+                        setTimeout(poll, successDelay);
+                        return;
+                    }
+                    if (data && data.timeout) {
+                        setTimeout(poll, successDelay);
+                        return;
+                    }
+                    setTimeout(poll, errorDelay);
+                    return;
+                },
+                dataType: "json",
+                error: function(data){
+                    setTimeout(poll, errorDelay);
+                }
+            });
+        })();
+        $("#btn").click(function(){
+            var text = $("input:text[name=text]").val();
+            $("input:text[name=text]").val("");
+            var pollUrl = `/actions?text=${text}`;
+            $.ajax({
+                url:pollUrl,
+                error: function(data){alert('Action aborted')},
+                dataType: "html",
+            })
+        })
+    </script>
+</body>
+</html>
